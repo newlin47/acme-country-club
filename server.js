@@ -1,61 +1,41 @@
-const Sequelize = require('sequelize');
-const conn = new Sequelize('postgres://localhost/acme_country_club_db');
+const { conn, Member, Facility, Booking } = require('./db');
 
 const express = require('express');
 const app = express();
 
-const Member = conn.define(
-	'member',
-	{
-		id: {
-			type: Sequelize.UUID,
-			primaryKey: true,
-			defaultValue: Sequelize.UUIDV4,
-		},
-		name: {
-			type: Sequelize.STRING(50),
-			allowNull: false,
-			unique: true,
-		},
-	},
-	{ timestamps: false }
-);
-
-const Facility = conn.define(
-	'facility',
-	{
-		id: {
-			type: Sequelize.UUID,
-			primaryKey: true,
-			defaultValue: Sequelize.UUIDV4,
-		},
-		name: {
-			type: Sequelize.STRING(50),
-			allowNull: false,
-		},
-	},
-	{ timestamps: false }
-);
-
-const Booking = conn.define('booking', {
-	id: {
-		type: Sequelize.UUID,
-		primaryKey: true,
-		defaultValue: Sequelize.UUIDV4,
-	},
-});
-
-Booking.belongsTo(Facility);
-Booking.belongsTo(Member, { as: 'booker' });
-Member.belongsTo(Member, { as: 'sponsor' });
-Member.hasMany(Member);
-Member.hasMany(Booking);
-Facility.hasMany(Booking);
-
 app.get('/api/facilities', async (req, res, next) => {
 	try {
-		const facilities = await Facility.findAll({ include: [Booking] });
+		const facilities = await Facility.findAll({
+			include: [{ model: Booking, include: { model: Member, as: 'booker' } }],
+		});
+		// shows the facilities, the bookings, and the members that booked them
+		// a nested include
 		res.send(facilities);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get('/api/bookings', async (req, res, next) => {
+	try {
+		const bookings = await Booking.findAll({
+			include: { model: Member, as: 'booker' },
+		});
+		// shows the member that booked the booking using the 'booker' aliass
+		res.send(bookings);
+	} catch (error) {
+		next(error);
+	}
+});
+
+app.get('/api/members', async (req, res, next) => {
+	try {
+		const members = await Member.findAll({
+			include: { model: Member, as: 'sponsor' },
+			include: { model: Member, as: 'sponsored' },
+		});
+		// shows all members and their sponsors by referring to aliases
+		res.send(members);
 	} catch (error) {
 		next(error);
 	}

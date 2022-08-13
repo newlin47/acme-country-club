@@ -15,6 +15,7 @@ const Member = conn.define(
 		name: {
 			type: Sequelize.STRING(50),
 			allowNull: false,
+			unique: true,
 		},
 	},
 	{ timestamps: false }
@@ -36,22 +37,19 @@ const Facility = conn.define(
 	{ timestamps: false }
 );
 
-const Booking = conn.define(
-	'booking',
-	{
-		id: {
-			type: Sequelize.UUID,
-			primaryKey: true,
-			defaultValue: Sequelize.UUIDV4,
-		},
+const Booking = conn.define('booking', {
+	id: {
+		type: Sequelize.UUID,
+		primaryKey: true,
+		defaultValue: Sequelize.UUIDV4,
 	},
-	{ timestamps: false }
-);
+});
 
 Booking.belongsTo(Facility);
 Booking.belongsTo(Member, { as: 'booker' });
 Member.belongsTo(Member, { as: 'sponsor' });
 Member.hasMany(Member);
+Member.hasMany(Booking);
 Facility.hasMany(Booking);
 
 app.get('/api/facilities', async (req, res, next) => {
@@ -82,16 +80,14 @@ const init = async () => {
 		larry.sponsorId = lucy.id;
 		ethyl.sponsorId = moe.id;
 		await Promise.all([
-			// moe.save(),
-			// lucy.save(),
-			// ethyl.save(),
-			// larry.save(),
-			// tennis.save(),
-			// pingpong.save(),
-			// marbles.save(),
+			moe.save(),
+			ethyl.save(),
+			larry.save(),
 			Booking.create({ bookerId: moe.id, facilityId: tennis.id }),
 			Booking.create({ bookerId: lucy.id, facilityId: marbles.id }),
 			Booking.create({ bookerId: lucy.id, facilityId: marbles.id }),
+			Booking.create({ bookerId: larry.id, facilityId: pingpong.id }),
+			Booking.create({ bookerId: ethyl.id, facilityId: pingpong.id }),
 		]);
 		const port = process.env.PORT || 3000;
 		app.listen(port, () => {
